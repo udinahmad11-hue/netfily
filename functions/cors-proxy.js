@@ -1,29 +1,23 @@
-exports.handler = async (event) => {
-    const url = event.queryStringParameters.url;
-    
-    if (!url) {
-        return {
-            statusCode: 400,
-            body: JSON.stringify({ error: 'Parameter "url" is required' })
-        };
-    }
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request))
+})
 
-    try {
-        const response = await fetch(url);
-        const data = await response.text();
-        
-        return {
-            statusCode: 200,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Content-Type': response.headers.get('content-type') || 'text/plain'
-            },
-            body: data
-        };
-    } catch (err) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: err.message })
-        };
+async function handleRequest(request) {
+  const url = new URL(request.url)
+  const targetUrl = url.pathname.slice(1) + url.search
+  
+  const response = await fetch(targetUrl, {
+    headers: {
+      'Origin': new URL(targetUrl).origin,
+      'Referer': new URL(targetUrl).origin
     }
-};
+  })
+  
+  const modifiedHeaders = new Headers(response.headers)
+  modifiedHeaders.set('Access-Control-Allow-Origin', '*')
+  
+  return new Response(response.body, {
+    status: response.status,
+    headers: modifiedHeaders
+  })
+}
