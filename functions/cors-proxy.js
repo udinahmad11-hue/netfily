@@ -1,44 +1,39 @@
 const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
-  // Ambil URL dari query string atau body
-  const targetUrl = event.queryStringParameters.url || 
-                    (event.body ? JSON.parse(event.body).url : null);
+  // Ambil URL dari path parameter /api/URL
+  const url = event.path.replace('/.netlify/functions/cors-proxy/', '');
   
-  if (!targetUrl) {
+  // Atau dari query parameter ?url=
+  const targetUrl = url || event.queryStringParameters.url;
+  
+  if (!targetUrl || targetUrl === 'cors-proxy') {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'Parameter "url" is required' }),
+      body: JSON.stringify({ 
+        error: 'Usage: /api/ENCODE_URL_HERE or ?url=ENCODE_URL_HERE',
+        example: '/api/https://api.github.com'
+      }),
     };
   }
 
   try {
-    const response = await fetch(targetUrl, {
-      method: event.httpMethod,
-      headers: {
-        ...event.headers,
-        host: new URL(targetUrl).host,
-        origin: targetUrl,
-        referer: targetUrl,
-      },
-    });
-
+    const decodedUrl = decodeURIComponent(targetUrl);
+    const response = await fetch(decodedUrl);
     const data = await response.text();
-
+    
     return {
-      statusCode: response.status,
+      statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Content-Type': response.headers.get('content-type'),
+        'Content-Type': response.headers.get('content-type') || 'application/json'
       },
-      body: data,
+      body: data
     };
-  } catch (error) {
+  } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({ error: err.message })
     };
   }
 };
