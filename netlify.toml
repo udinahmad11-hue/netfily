@@ -1,12 +1,7 @@
 [build]
-  command = "npm install"
   functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/cors-proxy/:splat"
+  from = "/proxy"
+  to = "/.netlify/functions/proxy"
   status = 200
-  force = true
