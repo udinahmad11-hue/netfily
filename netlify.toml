@@ -1,0 +1,13 @@
+[build]
+  functions = "functions"
+
+[[redirects]]
+  from = "/cors/*"
+  to = "/.netlify/functions/cors-proxy?url=:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/cors-proxy?url=:splat"
+  status = 200
