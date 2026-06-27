@@ -1,22 +1,19 @@
 export default async (request, context) => {
-  const incomingUrl = request.url; // Contoh: https://spontaneous-raindrop-7c59ab.netlify.app/at-live-7.tentcdn.eu/bpk-tv/...
+  const urlObj = new URL(request.url);
+  
+  // 1. Ambil URL target dari query parameter '?url='
+  let targetUrl = urlObj.searchParams.get("url");
 
-  // 1. Ambil path setelah nama domain Netlify kamu
-  const urlObj = new URL(incomingUrl);
-  // Ambil path, lalu hapus tanda garis miring di paling depan jika ada
-  let cleanPath = urlObj.pathname.startsWith('/') ? urlObj.pathname.substring(1) : urlObj.pathname;
-
-  // Jika kosong, kembalikan error bad request
-  if (!cleanPath || cleanPath === "") {
-    return new Response("Error: Masukkan URL target setelah tanda garing tanpa menggunakan http/https. Contoh: domain-netlify.app/at-live-7.tentcdn.eu/stream.mpd", { status: 400 });
+  if (!targetUrl) {
+    return new Response("Error: Mana URL-nya? Contoh: /proxy?url=https://alamat-stream.com/manifest.mpd", { status: 400 });
   }
 
-  // 2. Jika user tidak sengaja mengetik http/https, kita bersihkan dulu agar tidak memicu 404
-  cleanPath = cleanPath.replace(/^https?:\/+/i, '');
-
-  // 3. Rekonstruksi URL target asli dengan menyisipkan kembali https:// secara otomatis
-  // Sertakan juga seluruh query string bawaan (seperti token biner) jika ada
-  const targetUrl = `https://${cleanPath}${urlObj.search}`;
+  // 2. Bersihkan parameter internal 'url' agar sisa token stream aslinya bisa digabung kembali
+  urlObj.searchParams.delete("url"); 
+  const remainingParams = urlObj.searchParams.toString();
+  if (remainingParams) {
+    targetUrl += (targetUrl.includes("?") ? "&" : "?") + remainingParams;
+  }
 
   try {
     const forwardHeaders = new Headers();
@@ -36,6 +33,7 @@ export default async (request, context) => {
 
     const responseBody = await targetResponse.arrayBuffer();
 
+    // Inject CORS Header agar lolos di player
     const responseHeaders = new Headers(targetResponse.headers);
     responseHeaders.set("Access-Control-Allow-Origin", "*");
     responseHeaders.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
